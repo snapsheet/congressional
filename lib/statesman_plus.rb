@@ -28,26 +28,20 @@ module StatesmanPlus
         puts args
       end
 
-      def enter(reference)
-      end
+      # if active record is being used
+      def before_save(reference, from) end
 
-      def before_save(reference, from)
-      end
+      # if active record is being used
+      def after_save(reference, from) end
 
-      def after_save(reference, from)
-      end
+      def enter(reference, from) end
 
-      def exit(reference, from)
-      end
+      def exit(reference, from) end
     end
   end
 
   module Mechanize
     def self.included(base)
-      # if active record is being used
-      # and not already being included
-      # include Statesman::Adapters::ActiveRecordQueries
-
       # create the transition class
       # unless the transition is explicitly defined
       Object.const_set(
@@ -58,27 +52,38 @@ module StatesmanPlus
         }
       )
 
-      # if active record is being used
-      # and not already being included
-      # has_many (base.name.underscore+"_transitions").to_sym
-
       # create the state machine class based on states
       # unless the state machine is explicitly defined
       Object.const_set(
         "#{base.name}StateMachine",
         Class.new {
           include Statesman::Machine
+
+          before_transition do |reference, transition|
+            "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.exit(reference)
+          end
+
+          after_transition do |reference, transition|
+            "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.enter(reference)
+          end
         }
       )
 
-      # Initialize the newly created state machine
-      def state_machine
-        @state_machine ||= "#{base.name}StateMachine".constant.new(
-          base,
-          transition_class: "#{base.name}Transition".constant,
-          association_name: :transitions
-        )
-      end
+      # if active record is being used
+      # and not already being included
+      # has_many (base.name.underscore+"_transitions").to_sym
+    end
+
+    def tofu
+      "yummy"
+    end
+
+    def state_machine
+      @state_machine ||= "#{self.name}StateMachine".constant.new(
+        self,
+        transition_class: "#{self.name}Transition".constant,
+        association_name: :transitions
+      )
     end
   end
 end

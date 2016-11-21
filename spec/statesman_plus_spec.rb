@@ -18,7 +18,8 @@ describe StatesmanPlus do
 
   context "states will create a machine for included classes" do
     report = new BookReport
-    it 'does something useful' do
+    it 'can transition' do
+      report.state_machine.transition_to(:estimate_complete)
     end
   end
 end
