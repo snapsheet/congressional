@@ -1,9 +1,12 @@
 module StatesmanPlus
   class State
     class << self
-      def to(*args)
-        puts args
+      def descendants
+        ObjectSpace.each_object(Class).select { |klass| klass < self }
       end
+
+      def initial(*args) end
+      def to(*args) end
 
       # if active record is being used
       def before_save(reference, from) end

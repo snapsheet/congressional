@@ -49,9 +49,30 @@ module StatesmanPlus::Mechanize
       }
     )
 
+    class << base
+      alias_method :__new, :new
+      def new(*args)
+        e = __new(*args)
+        e.after_init
+        e
+      end
+    end
+
     # if active record is being used
     # and not already being included
     # has_many (base.name.underscore+"_transitions").to_sym
+  end
+
+  def after_init
+    @states = []
+
+    StatesmanPlus::State.descendants.each do |child|
+      @states << child if (/^#{self.class}/ =~ "#{child}") == 0
+    end
+  end
+
+  def states
+    @states
   end
 
   def state_machine
