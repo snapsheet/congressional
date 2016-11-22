@@ -5,8 +5,21 @@ module StatesmanPlus
         ObjectSpace.each_object(Class).select { |klass| klass < self }
       end
 
-      def initial(*args) end
-      def to(*args) end
+      def initial
+        @initial_state = true
+      end
+
+      def initial?
+        @initial_state == true
+      end
+
+      def to(*args)
+        @to_states = args
+      end
+
+      def to_states
+        @to_states
+      end
 
       # if active record is being used
       def before_save(reference, from) end

@@ -23,7 +23,9 @@ describe StatesmanPlus do
     report = BookReport.new
 
     it 'has its states' do
-      expect(report.states).to eq [BookReportCreated, BookReportComplete]
+      correct_states = [BookReportCreated, BookReportComplete]
+      expect(report.state_machine.class.states).to eq correct_states
+      expect(report.states).to eq correct_states
     end
 
     it 'can transition' do
