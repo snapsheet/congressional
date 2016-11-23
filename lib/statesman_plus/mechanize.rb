@@ -23,14 +23,28 @@ end
 module StatesmanPlus::Mechanize
   def state_machine
     @state_machine ||= "#{self.class}StateMachine".constant.new(
-      self,
-      transition_class: "#{self.class}Transition".constant,
-      association_name: :transitions
+      self
     )
   end
 
   def states
     self.state_machine.class.states
+  end
+
+  def current_state
+    self.state_machine.current_state.pascal.constant unless self.state_machine.current_state.nil?
+  end
+
+  def transition_to?(state)
+    self.state_machine.transition_to? state.to_sym
+  end
+
+  def transition_to!(state)
+    self.state_machine.transition_to! state.to_sym
+  end
+
+  def transition_to(state)
+    self.state_machine.transition_to state.to_sym
   end
 
   def self.included(base)
@@ -39,16 +53,7 @@ module StatesmanPlus::Mechanize
 
     define_transition_class base
     define_state_machine_class base
-    # set_state_machine_relations base
-
-    # class << base
-    #   alias_method :__new, :new
-    #   def new(*args)
-    #     e = __new(*args)
-    #     e.after_init
-    #     e
-    #   end
-    # end
+    set_state_machine_relations base
 
     # if active record is being used
     # and not already being included
@@ -63,8 +68,8 @@ module StatesmanPlus::Mechanize
       Class.new {
         include Statesman::Machine
 
-        self.define_singleton_method :states do
-          @states ||= StatesmanPlus::State.descendants.select { |child| (/^#{base.name}/ =~ "#{child}") == 0}
+        self.define_singleton_method :state_classes do
+          @state_classes ||= StatesmanPlus::State.descendants.select { |child| (/^#{base.name}/ =~ "#{child}") == 0}
         end
 
         before_transition do |reference, transition|
@@ -82,16 +87,18 @@ module StatesmanPlus::Mechanize
   def self.set_state_machine_relations(base)
     state_machine_class = "#{base.name}StateMachine".constant
 
-    state_machine_class.states.each do |state_class|
-      state_sym = state_class.name.underscore.to_sym
-      to_states_sym = state_class.to_states.map {|c| c.name.underscore.to_sym} if state_class.to_states.any?
+    state_machine_class.state_classes.each do |state_class|
       if state_class.initial?
-        state_machine_class.state state_sym, initial: true
+        state_machine_class.state state_class.to_sym, initial: true
       else
-        state_machine_class.state state_sym
+        state_machine_class.state state_class.to_sym
       end
+    end
 
-      state_machine_class.transition from: state_sym, to: to_states_sym if to_states_sym.any?
+    state_machine_class.state_classes.each do |state_class|
+      unless state_class.to_states.nil? || state_class.to_states.empty?
+        state_machine_class.transition from: state_class.to_sym, to: state_class.to_states.to_sym
+      end
     end
   end
   private_class_method :set_state_machine_relations
