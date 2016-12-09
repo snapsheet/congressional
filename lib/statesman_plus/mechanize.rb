@@ -1,24 +1,6 @@
 require "statesman"
-
-class String
-  def underscore
-    self.gsub(/::/, '/').
-    gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
-    gsub(/([a-z\d])([A-Z])/,'\1_\2').
-    tr("-", "_").
-    downcase
-  end
-
-  def pascal
-    self.gsub(/^\w/, &:upcase).
-    gsub(/_+([a-z])/, &:upcase).
-    gsub(/_+/,'')
-  end
-
-  def constant
-    Object.const_get(self)
-  end
-end
+require_relative "assistance/string"
+require_relative "assistance/array"
 
 module StatesmanPlus::Mechanize
   def state_machine
@@ -48,21 +30,16 @@ module StatesmanPlus::Mechanize
   end
 
   def self.included(base)
-    # enable if active record is being used
-    # include Statesman::Adapters::ActiveRecordQueries
+    include Statesman::Adapters::ActiveRecordQueries
 
     define_transition_class base
     define_state_machine_class base
     set_state_machine_relations base
 
-    # if active record is being used
-    # and not already being included
-    # has_many (base.name.underscore+"_transitions").to_sym
+    has_many (base.name.underscore+"_transitions").to_sym if self.respond_to? :has_many
   end
 
   def self.define_state_machine_class(base)
-    # create the state machine class based on states
-    # unless the state machine is explicitly defined
     Object.const_set(
       "#{base.name}StateMachine",
       Class.new {
@@ -73,11 +50,11 @@ module StatesmanPlus::Mechanize
         end
 
         before_transition do |reference, transition|
-          "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.exit(reference)
+          "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.exit(reference, transition)
         end
 
         after_transition do |reference, transition|
-          "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.enter(reference)
+          "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.enter(reference, transition)
         end
       }
     )
@@ -104,14 +81,11 @@ module StatesmanPlus::Mechanize
   private_class_method :set_state_machine_relations
 
   def self.define_transition_class(base)
-    # create the transition class
-    # unless the transition is explicitly defined
     Object.const_set(
       "#{base.name}Transition",
       Class.new {
-        # if active record is being used
-        # include Statesman::Adapters::ActiveRecordTransition
-        # belongs_to base.name.underscore.to_sym, inverse_of: (base.name.underscore+"_transitions").to_sym
+        include Statesman::Adapters::ActiveRecordTransition if self.respond_to? :serialize
+        belongs_to base.name.underscore.to_sym, inverse_of: (base.name.underscore+"_transitions").to_sym if self.respond_to? :belongs_to
       }
     )
   end

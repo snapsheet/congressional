@@ -24,7 +24,8 @@ describe StatesmanPlus do
 
     it 'has its states' do
       correct_states = [BookReportCreated, BookReportComplete]
-      expect(report.state_machine.class.state_classes).to eq correct_states
+      expect(report.state_machine.class.state_classes - correct_states).to eq []
+      expect(correct_states - report.state_machine.class.state_classes).to eq []
       expect(report.states).to eq(correct_states.map {|s| s.name.underscore})
     end
 
