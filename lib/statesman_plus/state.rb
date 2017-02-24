@@ -1,17 +1,17 @@
+require 'descendants_tracker'
+
 require_relative "assistance/string"
 require_relative "assistance/array"
 
 module StatesmanPlus
   class State
+    extend DescendantsTracker
+
     def initialize(*args) end
 
     class << self
       def to_sym
         self.name.underscore.to_sym
-      end
-
-      def descendants
-        ObjectSpace.each_object(Class).select { |klass| klass < self }
       end
 
       def initial
@@ -22,12 +22,12 @@ module StatesmanPlus
         @initial_state == true
       end
 
-      def to(*args)
+      def to(args)
         @to_states = args
       end
 
       def to_states
-        @to_states
+        @to_states.map{|sym| sym.to_s.pascal.constant}
       end
 
       def before_save(*args) end

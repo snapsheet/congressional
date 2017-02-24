@@ -1,11 +1,17 @@
 require 'spec_helper'
 
-class BookReportComplete < StatesmanPlus::State
-end
 
 class BookReportCreated < StatesmanPlus::State
   initial
-  to BookReportComplete
+  to [:book_report_complete, :book_report_cancelled]
+end
+
+class BookReportComplete < StatesmanPlus::State
+  to [:book_report_cancelled]
+end
+
+class BookReportCancelled < StatesmanPlus::State
+  to [:book_report_complete]
 end
 
 class BookReport
@@ -23,10 +29,10 @@ describe StatesmanPlus do
     report = BookReport.new
 
     it 'has its states' do
-      correct_states = [BookReportCreated, BookReportComplete]
+      correct_states = [BookReportCreated, BookReportComplete, BookReportCancelled]
+      state_names = correct_states.map {|s| s.name.underscore}
       expect(report.state_machine.class.state_classes - correct_states).to eq []
       expect(correct_states - report.state_machine.class.state_classes).to eq []
-      expect(report.states).to eq(correct_states.map {|s| s.name.underscore})
     end
 
     it 'can transition' do

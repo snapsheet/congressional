@@ -30,6 +30,7 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "bundler"
   spec.add_runtime_dependency "rake"
   spec.add_runtime_dependency "statesman"
+  spec.add_runtime_dependency "descendants_tracker"
   spec.add_development_dependency "rspec"
   spec.add_development_dependency "pry"
   spec.add_development_dependency "pry-nav"
