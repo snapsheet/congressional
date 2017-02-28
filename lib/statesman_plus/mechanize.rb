@@ -52,7 +52,6 @@ module StatesmanPlus::Mechanize
         end
 
         def send_before_save
-          binding.pry
           self.send_state_machine_event('before_save')
         end
 
@@ -66,9 +65,9 @@ module StatesmanPlus::Mechanize
               self.reload_state_machine.send(name)
             end
           rescue Statesman::TransitionConflictError, ActiveRecord::RecordNotUnique => e
-            # TransitionConflictError due to race condition
-            # One example is for the Claim - find_and_tie_to_assignment_without_save and tie_to_nlog delayed jobs running at the same time
-            # If this happens we will retry the event so it is captured in the correct state
+            # TransitionConflictError due to race condition.
+            # One example is delayed jobs running at the same time.
+            # If this happens, retry the event so it is captured in the correct state.
             if attempts > 0
               Rails.env.warning("TransitionConflictError OR RecordNotUnique OCCURRED. Retrying => #{e.message}")
               self.send_state_machine_event(name, attempts - 1)
@@ -98,7 +97,7 @@ module StatesmanPlus::Mechanize
         # end
 
         self.define_singleton_method :state_classes do
-          @state_classes ||= StatesmanPlus::State.descendants.select { |child| (/^#{base.name}/ =~ "#{child}") == 0}
+          StatesmanPlus::State.descendants.select {|state| state.constituents.include? base.to_s.underscore.to_sym}
         end
 
         before_transition do |reference, transition|
@@ -125,8 +124,8 @@ module StatesmanPlus::Mechanize
     end
 
     state_machine_class.state_classes.each do |state_class|
-      unless state_class.to_states.nil? || state_class.to_states.empty?
-        state_machine_class.transition from: state_class.to_sym, to: state_class.to_states.to_sym
+      unless state_class.to.nil? || state_class.to.empty?
+        state_machine_class.transition from: state_class.to_sym, to: state_class.to.to_sym
       end
     end
   end

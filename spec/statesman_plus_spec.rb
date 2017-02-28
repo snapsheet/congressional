@@ -1,21 +1,28 @@
 require 'spec_helper'
 
 
-class BookReportCreated < StatesmanPlus::State
+class Created < StatesmanPlus::State
   initial
-  to [:book_report_complete, :book_report_cancelled]
+
+  constituents :book_report
+  to [:complete, :cancelled]
 end
 
-class BookReportComplete < StatesmanPlus::State
-  to [:book_report_cancelled]
+class Complete < StatesmanPlus::State
+  constituents :book_report
+  to [:cancelled]
 end
 
-class BookReportCancelled < StatesmanPlus::State
-  to [:book_report_complete]
+class Cancelled < StatesmanPlus::State
+  constituents :book_report
+  to [:complete]
 end
 
 class BookReport
   include StatesmanPlus::Mechanize
+end
+
+class Course
 end
 
 ########
@@ -29,16 +36,15 @@ describe StatesmanPlus do
     report = BookReport.new
 
     it 'has its states' do
-      correct_states = [BookReportCreated, BookReportComplete, BookReportCancelled]
-      state_names = correct_states.map {|s| s.name.underscore}
+      correct_states = [Created, Complete, Cancelled]
       expect(report.state_machine.class.state_classes - correct_states).to eq []
       expect(correct_states - report.state_machine.class.state_classes).to eq []
     end
 
     it 'can transition' do
-      expect(report.current_state).to eq BookReportCreated
-      report.transition_to BookReportComplete
-      expect(report.current_state).to eq BookReportComplete
+      expect(report.current_state).to eq Created
+      report.transition_to Complete
+      expect(report.current_state).to eq Complete
     end
   end
 end

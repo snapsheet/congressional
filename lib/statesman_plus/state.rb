@@ -10,25 +10,17 @@ module StatesmanPlus
     def initialize(*args) end
 
     class << self
-      def to_sym
-        self.name.underscore.to_sym
-      end
+      def to_sym() self.name.underscore.to_sym end
 
-      def initial
-        @initial_state = true
-      end
+      def initial() @initial_state = true end
 
-      def initial?
-        @initial_state == true
-      end
+      def initial?() @initial_state == true end
 
-      def to(args)
-        @to_states = args
-      end
+      def constituents(args=nil) @constituents || @constituents = args.class == Array ? args : [args] end
 
-      def to_states
-        @to_states.map{|sym| sym.to_s.pascal.constant}
-      end
+      def to(args=nil) to_states || @to_states = args end
+
+      def to_states() @to_states && @to_states.map{|sym| sym.to_s.pascal.constant} end
 
       def before_save(*args) end
 
