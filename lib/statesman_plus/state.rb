@@ -16,11 +16,15 @@ module StatesmanPlus
 
       def initial?() @initial_state == true end
 
-      def constituents(args=nil) @constituents || @constituents = args.class == Array ? args : [args] end
+      def constituents(args=nil)
+        @constituents || @constituents = args.class == Array ? args : [args]
+      end
 
       def to(args=nil) to_states || @to_states = args end
 
-      def to_states() @to_states && @to_states.map{|sym| sym.to_s.pascal.constant} end
+      def to_states
+        @to_states && @to_states.map{|sym| sym.to_s.pascal.constant}
+      end
 
       def before_save(*args) end
 

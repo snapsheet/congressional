@@ -14,7 +14,21 @@ module StatesmanPlus::Mechanize
   end
 
   def current_state
-    self.state_machine.current_state.pascal.constant unless self.state_machine.current_state.nil?
+    unless self.state_machine.current_state.nil?
+      [
+        self.state_machine.class.to_s,
+        '::',
+        self.state_machine.current_state.pascal
+      ]
+      .join
+      .constant
+    end
+  end
+
+  private def transition_to_initial_state
+    if !self.respond_to?(:skip_state_machine?) || !self.skip_state_machine?
+      self.transition_to!(self.state_machine.class.successors['initial'].first)
+    end
   end
 
   def transition_to?(state)
@@ -37,8 +51,8 @@ module StatesmanPlus::Mechanize
     set_state_machine_relations base
 
     has_many (base.name.underscore+"_transitions").to_sym if self.respond_to? :has_many
-    before_save :send_before_save, :if => Proc.new { |e| e.changed? } if self.respond_to? :before_save
-    after_save :send_after_save, :if => Proc.new { |e| e.changed? } if self.respond_to? :after_save
+    before_save :send_ev_before_save, :if => Proc.new { |e| e.changed? } if self.respond_to? :before_save
+    after_save :send_ev_after_save, :if => Proc.new { |e| e.id_changed? && e.changed? } if self.respond_to? :after_save
   end
 
   def self.define_state_machine_class(base)
@@ -51,11 +65,11 @@ module StatesmanPlus::Mechanize
           @state_machine = self.class.state_machine_class.new(self, transition_class: self.class.transition_class)
         end
 
-        def send_before_save
+        def send_ev_before_save
           self.send_state_machine_event('before_save')
         end
 
-        def send_after_save
+        def send_ev_after_save
           self.send_state_machine_event('after_save')
         end
 
@@ -92,20 +106,44 @@ module StatesmanPlus::Mechanize
           self.current_state.after_save
         end
 
-        # def method_missing(name, *args, &block)
-        #   self.current_state.send(name, self.object, *args) if self.current_state.respond_to? name
-        # end
+        def method_missing(name, *args, &block)
+          begin
+            events = "#{self.class}::EVENTS".constantize
+          rescue NameError
+            events = []
+          end
+
+          events.concat([:ev_before_save, :ev_after_save]).uniq
+          clean_name = name.to_s.chomp('!').to_sym
+
+          if events.include?(clean_name)
+            state_class = self.class.state_class(self.current_state)
+            if state_class.present? && state_class.respond_to?(clean_name)
+              state_class.send(clean_name, self.object, *args)
+            else
+              if name.to_s.last == '!'
+                raise StateMachinable::EventNotHandledException.new(:event => clean_name, :state => self.current_state)
+              else
+                nil
+              end
+            end
+          else
+            super
+          end
+        end
 
         self.define_singleton_method :state_classes do
           StatesmanPlus::State.descendants.select {|state| state.constituents.include? base.to_s.underscore.to_sym}
         end
 
         before_transition do |reference, transition|
-          "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.exit(reference, transition)
+          state = reference.current_state
+          state.exit reference, transition if state.respond_to? :exit
         end
 
         after_transition do |reference, transition|
-          "#{reference.state_machine.class}::#{reference.state_machine.current_state.pascal}".constant.enter(reference, transition)
+          state = reference.current_state
+          state.enter reference, transition if state.respond_to? :enter
         end
       }
     )
