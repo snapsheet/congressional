@@ -1,25 +1,25 @@
 require 'spec_helper'
 
 
-class Created < StatesmanPlus::State
+class Created < Congressional::State
   initial
 
   constituents :book_report
   to [:complete, :cancelled]
 end
 
-class Complete < StatesmanPlus::State
+class Complete < Congressional::State
   constituents :book_report
   to [:cancelled]
 end
 
-class Cancelled < StatesmanPlus::State
+class Cancelled < Congressional::State
   constituents :book_report
   to [:complete]
 end
 
 class BookReport
-  include StatesmanPlus::Mechanize
+  include Congressional::Mechanize
 end
 
 class Course
@@ -27,9 +27,9 @@ end
 
 ########
 
-describe StatesmanPlus do
+describe Congressional do
   it 'has a version number' do
-    expect(StatesmanPlus::VERSION).not_to be nil
+    expect(Congressional::VERSION).not_to be nil
   end
 
   context "states will create a machine for included classes" do

@@ -1,3 +1,3 @@
-module StatesmanPlus
+module Congressional
   VERSION = "0.1.0"
 end

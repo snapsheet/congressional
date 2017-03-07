@@ -3,7 +3,7 @@ require 'descendants_tracker'
 require_relative "assistance/string"
 require_relative "assistance/array"
 
-module StatesmanPlus
+module Congressional
   class State
     extend DescendantsTracker
 

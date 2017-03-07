@@ -2,7 +2,7 @@ require "statesman"
 require_relative "assistance/string"
 require_relative "assistance/array"
 
-module StatesmanPlus::Mechanize
+module Congressional::Mechanize
   def state_machine
     @state_machine ||= "#{self.class}StateMachine".constant.new(
       self
@@ -133,7 +133,7 @@ module StatesmanPlus::Mechanize
         end
 
         self.define_singleton_method :state_classes do
-          StatesmanPlus::State.descendants.select {|state| state.constituents.include? base.to_s.underscore.to_sym}
+          Congressional::State.descendants.select {|state| state.constituents.include? base.to_s.underscore.to_sym}
         end
 
         before_transition do |reference, transition|
