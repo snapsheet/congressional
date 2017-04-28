@@ -9,6 +9,10 @@ module Congressional::Mechanize
     )
   end
 
+  def reload_state_machine
+    @state_machine = self.class.state_machine_class.new(self, transition_class: self.class.transition_class)
+  end
+
   def states
     self.state_machine.class.states
   end
@@ -22,6 +26,39 @@ module Congressional::Mechanize
       ]
       .join
       .constant
+    end
+  end
+
+  def send_ev_before_save
+    self.send_state_machine_event('before_save')
+  end
+
+  def send_ev_after_save
+    self.send_state_machine_event('after_save')
+  end
+
+  def send_state_machine_event(name, attempts = 5)
+    begin
+      ActiveRecord::Base.transaction do
+        self.reload_state_machine.send(name)
+      end
+    rescue Statesman::TransitionConflictError, ActiveRecord::RecordNotUnique => e
+      # TransitionConflictError due to race condition.
+      # One example is delayed jobs running at the same time.
+      # If this happens, retry the event so it is captured in the correct state.
+      if attempts > 0
+        Rails.env.warning("TransitionConflictError OR RecordNotUnique OCCURRED. Retrying => #{e.message}")
+        self.send_state_machine_event(name, attempts - 1)
+      else
+        raise e
+      end
+    rescue ActiveRecord::StatementInvalid => e
+      if (e.message =~ /Deadlock/) && (attempts > 0)
+        Rails.env.warning("DEADLOCK OCCURRED. Retrying => #{e.message}")
+        self.send_state_machine_event(name, attempts - 1)
+      else
+        raise e
+      end
     end
   end
 
@@ -53,6 +90,7 @@ module Congressional::Mechanize
     has_many (base.name.underscore+"_transitions").to_sym if self.respond_to? :has_many
     before_save :send_ev_before_save, :if => Proc.new { |e| e.changed? } if self.respond_to? :before_save
     after_save :send_ev_after_save, :if => Proc.new { |e| e.id_changed? && e.changed? } if self.respond_to? :after_save
+
   end
 
   def self.define_state_machine_class(base)
@@ -60,43 +98,6 @@ module Congressional::Mechanize
       "#{base.name}StateMachine",
       Class.new {
         include Statesman::Machine
-
-        def reload_state_machine
-          @state_machine = self.class.state_machine_class.new(self, transition_class: self.class.transition_class)
-        end
-
-        def send_ev_before_save
-          self.send_state_machine_event('before_save')
-        end
-
-        def send_ev_after_save
-          self.send_state_machine_event('after_save')
-        end
-
-        def send_state_machine_event(name, attempts = 5)
-          begin
-            ActiveRecord::Base.transaction do
-              self.reload_state_machine.send(name)
-            end
-          rescue Statesman::TransitionConflictError, ActiveRecord::RecordNotUnique => e
-            # TransitionConflictError due to race condition.
-            # One example is delayed jobs running at the same time.
-            # If this happens, retry the event so it is captured in the correct state.
-            if attempts > 0
-              Rails.env.warning("TransitionConflictError OR RecordNotUnique OCCURRED. Retrying => #{e.message}")
-              self.send_state_machine_event(name, attempts - 1)
-            else
-              raise e
-            end
-          rescue ActiveRecord::StatementInvalid => e
-            if (e.message =~ /Deadlock/) && (attempts > 0)
-              Rails.env.warning("DEADLOCK OCCURRED. Retrying => #{e.message}")
-              self.send_state_machine_event(name, attempts - 1)
-            else
-              raise e
-            end
-          end
-        end
 
         def before_save
           self.current_state.before_save
