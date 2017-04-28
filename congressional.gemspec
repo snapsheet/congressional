@@ -6,6 +6,11 @@ require 'congressional/version'
 Gem::Specification.new do |spec|
   spec.name          = "congressional"
   spec.version       = Congressional::VERSION
+  spec.email         = "tech@snapsheet.me"
+  spec.homepage      = "https://github.com/snapsheet/congressional"
+  spec.summary       = "Congressional: States as first-class citizens"
+  spec.description   = "A gem for managing complex state behavior."
+  spec.authors       = ['dtittle@gmail.com']
 
   spec.license       = "MIT"
 
